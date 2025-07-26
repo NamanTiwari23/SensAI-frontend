@@ -2,22 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
+import { supabase, NmapReport } from '@/lib/supabase';
 import Link from 'next/link';
 
-interface ScanResult {
-  id: number;
-  target: string;
-  scan_result: string;
-  analysis: string;
-  timestamp: string;
-  status: string;
-}
-
 export default function ResultsPage() {
-  const [scans, setScans] = useState<ScanResult[]>([]);
+  const [scans, setScans] = useState<NmapReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedScan, setSelectedScan] = useState<ScanResult | null>(null);
+  const [selectedScan, setSelectedScan] = useState<NmapReport | null>(null);
 
   useEffect(() => {
     fetchAllScans();
@@ -26,9 +17,9 @@ export default function ResultsPage() {
   const fetchAllScans = async () => {
     try {
       const { data, error } = await supabase
-        .from('scan_results')
+        .from('nmap_reports')
         .select('*')
-        .order('timestamp', { ascending: false });
+        .order('timestampz', { ascending: false });
 
       if (error) {
         console.error('Error fetching scans:', error);
@@ -45,7 +36,7 @@ export default function ResultsPage() {
   const deleteScan = async (id: number) => {
     try {
       const { error } = await supabase
-        .from('scan_results')
+        .from('nmap_reports')
         .delete()
         .eq('id', id);
 
@@ -128,13 +119,13 @@ export default function ResultsPage() {
             </div>
             <div className="bg-gray-800/70 backdrop-blur-md border border-green-400/20 rounded-xl p-6 text-center">
               <div className="text-3xl font-bold text-green-400 mb-2">
-                {scans.filter(s => s.status === 'completed').length}
+                {scans.length}
               </div>
               <div className="text-gray-300">Completed</div>
             </div>
             <div className="bg-gray-800/70 backdrop-blur-md border border-purple-400/20 rounded-xl p-6 text-center">
               <div className="text-3xl font-bold text-purple-400 mb-2">
-                {scans.length > 0 ? new Date(scans[0].timestamp).toLocaleDateString() : 'N/A'}
+                {scans.length > 0 ? new Date(scans[0].timestampz).toLocaleDateString() : 'N/A'}
               </div>
               <div className="text-gray-300">Latest Scan</div>
             </div>
@@ -177,14 +168,12 @@ export default function ResultsPage() {
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="text-lg font-semibold text-blue-400 truncate">{scan.target}</h3>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        scan.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {scan.status}
+                      <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">
+                        completed
                       </span>
                     </div>
                     <p className="text-sm text-gray-400 mb-2">
-                      {new Date(scan.timestamp).toLocaleString()}
+                      {new Date(scan.timestampz).toLocaleString()}
                     </p>
                     <p className="text-sm text-gray-300 line-clamp-2">
                       {scan.analysis.substring(0, 100)}...
@@ -215,29 +204,25 @@ export default function ResultsPage() {
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-sm font-semibold text-gray-400 mb-2">Timestamp</h4>
-                        <p className="text-gray-300">{new Date(selectedScan.timestamp).toLocaleString()}</p>
+                        <p className="text-gray-300">{new Date(selectedScan.timestampz).toLocaleString()}</p>
                       </div>
                       
                       <div>
-                        <h4 className="text-sm font-semibold text-gray-400 mb-2">Status</h4>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          selectedScan.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-                        }`}>
-                          {selectedScan.status}
-                        </span>
+                        <h4 className="text-sm font-semibold text-gray-400 mb-2">Scan ID</h4>
+                        <p className="text-gray-300 font-mono text-sm">{selectedScan.scan_id}</p>
                       </div>
                       
                       <div>
                         <h4 className="text-sm font-semibold text-gray-400 mb-2">AI Analysis</h4>
-                        <div className="bg-gray-900/50 rounded p-3 text-sm text-gray-300 max-h-40 overflow-y-auto">
+                        <div className="bg-gray-900/50 rounded p-4 text-sm text-gray-300 max-h-48 overflow-y-auto">
                           {selectedScan.analysis}
                         </div>
                       </div>
                       
                       <div>
                         <h4 className="text-sm font-semibold text-gray-400 mb-2">Raw Scan Output</h4>
-                        <div className="bg-gray-900/50 rounded p-3 text-xs text-gray-300 max-h-40 overflow-y-auto font-mono">
-                          <pre>{selectedScan.scan_result}</pre>
+                        <div className="bg-gray-900/50 rounded p-4 text-xs text-gray-300 max-h-48 overflow-y-auto font-mono">
+                          <pre className="whitespace-pre-wrap">{selectedScan.scan_result}</pre>
                         </div>
                       </div>
                     </div>
